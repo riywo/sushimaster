@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	homedir "github.com/mitchellh/go-homedir"
+	"github.com/mitchellh/go-homedir"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -30,7 +30,7 @@ func main() {
 	}
 
 	if err := execCmd(cmd, args); err != nil {
-		errorExit("execCmd failed by %+v", err)
+		errorExit("execCmd %s failed by %+v", cmd, err)
 	}
 }
 
@@ -59,7 +59,7 @@ func parseArgs() (cmd string, args []string) {
 	cmd = filepath.Base(os.Args[0])
 
 	flag.Usage = func() {
-		fmt.Printf("Usage: %s [options]\n\n", cmd)
+		fmt.Printf("Usage: %s [options] command args...\n\n", cmd)
 		flag.PrintDefaults()
 	}
 	var version = flag.Bool("version", false, "show version")
@@ -73,6 +73,10 @@ func parseArgs() (cmd string, args []string) {
 	}
 
 	if cmd == "sushibox" {
+		if len(args) == 0 {
+			flag.Usage()
+			os.Exit(1)
+		}
 		cmd, args = args[0], args[1:]
 	}
 

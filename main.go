@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/jteeuwen/go-bindata"
 	_ "github.com/mitchellh/go-homedir"
-	"github.com/riywo/go-bindata"
 	"io/ioutil"
 	"os"
 	"os/exec"

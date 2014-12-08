@@ -21,7 +21,7 @@ func Asset(name string) ([]byte, error) {
 	path := filepath.Join(mockDir, name)
 	buf, err := ioutil.ReadFile(path)
 	if err != nil {
-		err = fmt.Errorf("Error reading asset %%s at %%s: %%v", name, path, err)
+		err = fmt.Errorf("Error reading asset %s at %s: %v", name, path, err)
 	}
 	return buf, err
 }
@@ -34,7 +34,7 @@ func AssetInfo(name string) (os.FileInfo, error) {
 	path := filepath.Join(mockDir, name)
 	fi, err := os.Stat(path)
 	if err != nil {
-		err = fmt.Errorf("Error reading asset info %%s at %%s: %%v", name, path, err)
+		err = fmt.Errorf("Error reading asset info %s at %s: %v", name, path, err)
 	}
 	return fi, err
 }
