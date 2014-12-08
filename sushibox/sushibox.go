@@ -10,11 +10,11 @@ import (
 	"syscall"
 )
 
-var SushiBoxDir = ".sushibox"
-var VersionsDir = "versions"
-
-var BaseDir = Version
-var BinDir = "bin"
+var HomeDir = homeDir()
+var SushiBoxDir string
+var VersionsDir string
+var BaseDir string
+var BinDir string
 
 func main() {
 	if err := initDirs(); err != nil {
@@ -34,26 +34,33 @@ func main() {
 	}
 }
 
-func initDirs() error {
+func homeDir() string {
 	homedir, err := homedir.Dir()
 	if err != nil {
-		return err
+		errorExit("Can't find homeDir by %+v", err)
 	}
-	SushiBoxDir = filepath.Join(homedir, SushiBoxDir)
-	err = os.MkdirAll(SushiBoxDir, os.FileMode(0755))
+	return homedir
+}
+
+func initDirs() error {
+	SushiBoxDir = filepath.Join(HomeDir, ".sushibox")
+	VersionsDir = filepath.Join(SushiBoxDir, "versions")
+
+	err := os.MkdirAll(SushiBoxDir, os.FileMode(0755))
 	if err != nil {
 		return err
 	}
-	VersionsDir = filepath.Join(SushiBoxDir, VersionsDir)
 	err = os.MkdirAll(VersionsDir, os.FileMode(0755))
 	if err != nil {
 		return err
 	}
 
-	BaseDir = filepath.Join(VersionsDir, BaseDir)
-	BinDir = filepath.Join(BaseDir, BinDir)
+	BaseDir = filepath.Join(VersionsDir, Version)
+	BinDir = filepath.Join(BaseDir, "bin")
 	return nil
 }
+
+var version = flag.Bool("version", false, "show version")
 
 func parseArgs() (cmd string, args []string) {
 	cmd = filepath.Base(os.Args[0])
@@ -62,7 +69,6 @@ func parseArgs() (cmd string, args []string) {
 		fmt.Printf("Usage: %s [options] command args...\n\n", cmd)
 		flag.PrintDefaults()
 	}
-	var version = flag.Bool("version", false, "show version")
 
 	flag.Parse()
 	args = flag.Args()
