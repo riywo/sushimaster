@@ -57,7 +57,7 @@ func AssetNames() (names []string) {
 	}
 	err := filepath.Walk(mockDir, f)
 	if err != nil {
-		panic(err)
+		errorExit("AssetNames failed by %+v", err)
 	}
 	return
 }
