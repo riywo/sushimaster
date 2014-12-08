@@ -55,14 +55,41 @@ func (suite *SushiboxTestSuite) TestInitBinDir() {
 
 func (suite *SushiboxTestSuite) TestParseArgs() {
 	os.Args = []string{"sushibox", "foo", "bar", "baz"}
-	cmd, args := parseArgs()
+	cmd, args, err := parseArgs()
 	suite.Equal("foo", cmd)
 	suite.Equal([]string{"bar", "baz"}, args)
+	suite.Nil(err)
+	suite.False(*version)
 }
 
 func (suite *SushiboxTestSuite) TestParseArgsAsOtherCommand() {
 	os.Args = []string{"a", "b", "c"}
-	cmd, args := parseArgs()
+	cmd, args, err := parseArgs()
 	suite.Equal("a", cmd)
 	suite.Equal([]string{"b", "c"}, args)
+	suite.Nil(err)
+	suite.False(*version)
+}
+
+func (suite *SushiboxTestSuite) TestParseArgsMissing() {
+	os.Args = []string{"sushibox"}
+	_, _, err := parseArgs()
+	suite.NotNil(err)
+	suite.False(*version)
+}
+
+func (suite *SushiboxTestSuite) TestParseArgsVersion() {
+	os.Args = []string{"sushibox", "-version"}
+	_, _, err := parseArgs()
+	suite.Nil(err)
+	suite.True(*version)
+}
+
+func (suite *SushiboxTestSuite) TestParseArgsVersionAsOtherCommand() {
+	os.Args = []string{"foo", "-version"}
+	cmd, args, err := parseArgs()
+	suite.Equal("foo", cmd)
+	suite.Equal([]string{"-version"}, args)
+	suite.Nil(err)
+	suite.False(*version)
 }

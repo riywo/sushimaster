@@ -21,7 +21,13 @@ func main() {
 		errorExit("initDirs failed by %+v", err)
 	}
 
-	cmd, args := parseArgs()
+	cmd, args, err := parseArgs()
+	if *version {
+		os.Exit(0)
+	}
+	if err != nil {
+		errorExit("parseArgs failed by %+v", err)
+	}
 
 	if err := checkFilesInfo(); err != nil {
 		if err = restoreFiles(); err != nil {
@@ -37,7 +43,7 @@ func main() {
 func homeDir() string {
 	homedir, err := homedir.Dir()
 	if err != nil {
-		errorExit("Can't find homeDir by %+v", err)
+		errorExit("homeDir failed by %+v", err)
 	}
 	return homedir
 }
@@ -62,30 +68,29 @@ func initDirs() error {
 
 var version = flag.Bool("version", false, "show version")
 
-func parseArgs() (cmd string, args []string) {
-	cmd = filepath.Base(os.Args[0])
-
-	flag.Usage = func() {
-		fmt.Printf("Usage: %s [options] command args...\n\n", cmd)
-		flag.PrintDefaults()
-	}
-
-	flag.Parse()
-	args = flag.Args()
-
-	if *version {
-		fmt.Printf("%s\n", Version)
-		os.Exit(0)
-	}
-
+func parseArgs() (cmd string, args []string, err error) {
+	cmd, args = filepath.Base(os.Args[0]), os.Args[1:]
+	*version = false
 	if cmd == "sushibox" {
+		flag.Usage = func() {
+			fmt.Printf("Usage: %s [options] command args...\n\n", cmd)
+			flag.PrintDefaults()
+		}
+
+		flag.Parse()
+
+		if *version {
+			fmt.Printf("%s\n", Version)
+			return
+		}
+
 		if len(args) == 0 {
 			flag.Usage()
-			os.Exit(1)
+			err = fmt.Errorf("missing args")
+		} else {
+			cmd, args = flag.Args()[0], flag.Args()[1:]
 		}
-		cmd, args = args[0], args[1:]
 	}
-
 	return
 }
 
