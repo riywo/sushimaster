@@ -18,19 +18,19 @@ var BinDir = "bin"
 
 func main() {
 	if err := initDirs(); err != nil {
-		panic(err)
+		errorExit("initDirs failed by %+v", err)
 	}
 
 	cmd, args := parseArgs()
 
 	if err := checkFilesInfo(); err != nil {
 		if err = restoreFiles(); err != nil {
-			panic(err)
+			errorExit("restoreFiles failed by %+v", err)
 		}
 	}
 
 	if err := execCmd(cmd, args); err != nil {
-		panic(err)
+		errorExit("execCmd failed by %+v", err)
 	}
 }
 
@@ -62,9 +62,15 @@ func parseArgs() (cmd string, args []string) {
 		fmt.Printf("Usage: %s [options]\n\n", cmd)
 		flag.PrintDefaults()
 	}
+	var version = flag.Bool("version", false, "show version")
 
 	flag.Parse()
 	args = flag.Args()
+
+	if *version {
+		fmt.Printf("%s\n", Version)
+		os.Exit(0)
+	}
 
 	if cmd == "sushibox" {
 		cmd, args = args[0], args[1:]
@@ -126,4 +132,9 @@ func execCmd(cmd string, args []string) error {
 	argv := append([]string{cmdPath}, args...)
 	envv := os.Environ()
 	return syscall.Exec(cmdPath, argv, envv)
+}
+
+func errorExit(format string, a ...interface{}) {
+	fmt.Fprintf(os.Stderr, "Error: "+format+"\n", a...)
+	os.Exit(1)
 }

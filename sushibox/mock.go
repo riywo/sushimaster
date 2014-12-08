@@ -41,7 +41,7 @@ func AssetInfo(name string) (os.FileInfo, error) {
 
 func AssetNames() (names []string) {
 	if mockDir == "" {
-		panic(fmt.Errorf("Please specify src directory by %s", mockDirEnv))
+		errorExit("Please specify src directory by %s", mockDirEnv)
 	}
 
 	f := func(src string, info os.FileInfo, err error) error {
