@@ -14,9 +14,13 @@ import (
 )
 
 func main() {
+	os.Exit(realMain())
+}
+
+func realMain() int {
 	workDir, err := ioutil.TempDir("", "sushimaster_")
 	if err != nil {
-		errorExit("%+v", err)
+		return errorExit("%+v", err)
 	}
 	defer func() {
 		os.RemoveAll(workDir)
@@ -26,16 +30,17 @@ func main() {
 
 	err = writeAssets(workDir)
 	if err != nil {
-		errorExit("writeAssets failed by %+v", err)
+		return errorExit("writeAssets failed by %+v", err)
 	}
 	err = writeBindata(workDir, input)
 	if err != nil {
-		errorExit("writeBindata failed by %+v", err)
+		return errorExit("writeBindata failed by %+v", err)
 	}
 	err = buildSushibox(workDir, output)
 	if err != nil {
-		errorExit("buildSushibox failed by %+v", err)
+		return errorExit("buildSushibox failed by %+v", err)
 	}
+	return 0
 }
 
 func parseArgs() (input, output string) {
@@ -109,7 +114,7 @@ func buildSushibox(workDir, output string) error {
 	return cmd.Run()
 }
 
-func errorExit(format string, a ...interface{}) {
+func errorExit(format string, a ...interface{}) int {
 	fmt.Fprintf(os.Stderr, "Error: "+format+"\n", a...)
-	os.Exit(1)
+	return 1
 }

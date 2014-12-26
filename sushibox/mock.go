@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -12,6 +14,16 @@ import (
 const mockDirEnv = "SUSHIBOX_MOCK"
 
 var mockDir = os.Getenv(mockDirEnv)
+
+var execMockFunc = func(arg0 string, argv, envv []string) (stdout, stderr []byte, err error) {
+	cmd := exec.Command(arg0, argv[1:]...)
+	cmd.Env = envv
+	var outbuf, errbuf bytes.Buffer
+	cmd.Stdout, cmd.Stderr = &outbuf, &errbuf
+	err = cmd.Run()
+	stdout, stderr = outbuf.Bytes(), errbuf.Bytes()
+	return
+}
 
 func Asset(name string) ([]byte, error) {
 	if mockDir == "" {
@@ -62,62 +74,69 @@ func AssetNames() (names []string) {
 	return
 }
 
-func RestoreAssets(dir, name string) error { // name is ignored
-	if mockDir == "" {
-		return fmt.Errorf("Please specify src directory by %s", mockDirEnv)
+func AssetDir(name string) (names []string, err error) {
+	path := filepath.Join(mockDir, name)
+	info, err := os.Stat(path)
+	if err != nil {
+		return
 	}
-
-	f := func(src string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if info.Mode().IsDir() {
-			return nil
-		}
-		path := strings.TrimPrefix(src, mockDir+string(os.PathSeparator))
-		dst := filepath.Join(dir, path)
-		return _copyFile(src, info, dst)
+	if !info.IsDir() {
+		err = fmt.Errorf("file %s", path)
+		return
 	}
-	return filepath.Walk(mockDir, f)
+	list, err := ioutil.ReadDir(path)
+	if err != nil {
+		return
+	}
+	for _, fi := range list {
+		n := strings.TrimPrefix(fi.Name(), mockDir+string(os.PathSeparator))
+		names = append(names, n)
+	}
+	return
 }
 
-func _copyFile(src string, info os.FileInfo, dst string) error {
-	dir, _ := filepath.Split(dst)
-	err := os.MkdirAll(dir, os.FileMode(0755))
+// Restore an asset under the given directory
+func RestoreAsset(dir, name string) error {
+	data, err := Asset(name)
 	if err != nil {
 		return err
 	}
-
-	in, err := os.Open(src)
+	info, err := AssetInfo(name)
 	if err != nil {
 		return err
 	}
-	defer in.Close()
-
-	out, err := os.Create(dst)
+	err = os.MkdirAll(_filePath(dir, path.Dir(name)), os.FileMode(0755))
 	if err != nil {
 		return err
 	}
-	defer out.Close()
-
-	if _, err = io.Copy(out, in); err != nil {
-		return err
-	}
-
-	err = out.Sync()
+	err = ioutil.WriteFile(_filePath(dir, name), data, info.Mode())
 	if err != nil {
 		return err
 	}
-
-	err = os.Chmod(dst, info.Mode())
+	err = os.Chtimes(_filePath(dir, name), info.ModTime(), info.ModTime())
 	if err != nil {
 		return err
 	}
-
-	err = os.Chtimes(dst, info.ModTime(), info.ModTime())
-	if err != nil {
-		return err
-	}
-
 	return nil
+}
+
+// Restore assets under the given directory recursively
+func RestoreAssets(dir, name string) error {
+	children, err := AssetDir(name)
+	if err != nil { // File
+		return RestoreAsset(dir, name)
+	} else { // Dir
+		for _, child := range children {
+			err = RestoreAssets(dir, path.Join(name, child))
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func _filePath(dir, name string) string {
+	cannonicalName := strings.Replace(name, "\\", "/", -1)
+	return filepath.Join(append([]string{dir}, strings.Split(cannonicalName, "/")...)...)
 }

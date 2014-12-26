@@ -10,23 +10,24 @@ import (
 
 type SushiboxTestSuite struct {
 	suite.Suite
+	tempDir string
 }
 
 func TestSuite(t *testing.T) {
 	suite.Run(t, new(SushiboxTestSuite))
 }
 
-var tempDir string
-
 func (suite *SushiboxTestSuite) SetupTest() {
-	tempDir, _ = ioutil.TempDir("", "sushibox_test_")
-	HomeDir = tempDir
+	mockDir = "test"
+	execFunc = execMockFunc
+	suite.tempDir, _ = ioutil.TempDir("", "sushibox_test_")
+	HomeDir = suite.tempDir
 	err := initDirs()
 	suite.Nil(err)
 }
 
 func (suite *SushiboxTestSuite) TearDownTest() {
-	err := os.RemoveAll(tempDir)
+	err := os.RemoveAll(suite.tempDir)
 	suite.Nil(err)
 }
 
@@ -92,4 +93,63 @@ func (suite *SushiboxTestSuite) TestParseArgsVersionAsOtherCommand() {
 	suite.Equal([]string{"-version"}, args)
 	suite.Nil(err)
 	suite.False(*version)
+}
+
+func (suite *SushiboxTestSuite) TestCheckFilesInfo() {
+	suite.Nil(RestoreAssets(BaseDir, ""))
+	suite.Nil(checkFilesInfo())
+}
+
+func (suite *SushiboxTestSuite) TestCheckFilesInfoNoFile() {
+	suite.True(os.IsNotExist(checkFilesInfo()))
+}
+
+func (suite *SushiboxTestSuite) TestCheckFilesInfoModified() {
+	suite.Nil(RestoreAssets(BaseDir, ""))
+	os.Truncate(filepath.Join(BaseDir, AssetNames()[0]), 1)
+	suite.NotNil(checkFilesInfo())
+}
+
+func (suite *SushiboxTestSuite) TestRestoreFiles() {
+	suite.Nil(restoreFiles())
+	fi1, _ := os.Stat(filepath.Join(BinDir, "foo"))
+	suite.Nil(restoreFiles())
+	fi2, _ := os.Stat(filepath.Join(BinDir, "foo"))
+	suite.True(os.SameFile(fi1, fi2))
+}
+
+func (suite *SushiboxTestSuite) TestExecCmd() {
+	suite.Nil(restoreFiles())
+	stdout, stderr, err := execCmd("foo", []string{})
+	suite.Equal("foo\n", string(stdout))
+	suite.Equal("", string(stderr))
+	suite.Nil(err)
+}
+
+func (suite *SushiboxTestSuite) TestExecCmdNotExecutable() {
+	suite.Nil(restoreFiles())
+	stdout, stderr, err := execCmd("bar", []string{})
+	suite.Equal("", string(stdout))
+	suite.Equal("", string(stderr))
+	suite.True(os.IsPermission(err))
+}
+
+func (suite *SushiboxTestSuite) TestRealMain() {
+	os.Args = []string{"sushibox", "foo"}
+	suite.Equal(0, realMain())
+}
+
+func (suite *SushiboxTestSuite) TestRealMainAsOtherCommand() {
+	os.Args = []string{"foo"}
+	suite.Equal(0, realMain())
+}
+
+func (suite *SushiboxTestSuite) TestRealMainNotExecutable() {
+	os.Args = []string{"sushibox", "bar"}
+	suite.Equal(1, realMain())
+}
+
+func (suite *SushiboxTestSuite) TestRealMainNotFound() {
+	os.Args = []string{"sushibox", "baz"}
+	suite.Equal(1, realMain())
 }

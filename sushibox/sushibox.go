@@ -17,27 +17,33 @@ var BaseDir string
 var BinDir string
 
 func main() {
+	os.Exit(realMain())
+}
+
+func realMain() int {
 	if err := initDirs(); err != nil {
-		errorExit("initDirs failed by %+v", err)
+		return errorExit("initDirs failed by %+v", err)
 	}
 
 	cmd, args, err := parseArgs()
 	if *version {
-		os.Exit(0)
+		return 0
 	}
 	if err != nil {
-		errorExit("parseArgs failed by %+v", err)
+		return errorExit("parseArgs failed by %+v", err)
 	}
 
 	if err := checkFilesInfo(); err != nil {
 		if err = restoreFiles(); err != nil {
-			errorExit("restoreFiles failed by %+v", err)
+			return errorExit("restoreFiles failed by %+v", err)
 		}
 	}
 
-	if err := execCmd(cmd, args); err != nil {
-		errorExit("execCmd %s failed by %+v", cmd, err)
+	_, _, err = execCmd(cmd, args)
+	if err != nil {
+		return errorExit("execCmd failed by %+v", err)
 	}
+	return 0
 }
 
 func homeDir() string {
@@ -142,14 +148,19 @@ func restoreFiles() error {
 	return checkFilesInfo()
 }
 
-func execCmd(cmd string, args []string) error {
+var execFunc = func(arg0 string, argv, envv []string) (stdout, stderr []byte, err error) {
+	syscall.Exec(arg0, argv, envv)
+	return // never called
+}
+
+func execCmd(cmd string, args []string) (stdout, stderr []byte, err error) {
 	cmdPath := filepath.Join(BinDir, cmd)
 	argv := append([]string{cmdPath}, args...)
 	envv := os.Environ()
-	return syscall.Exec(cmdPath, argv, envv)
+	return execFunc(cmdPath, argv, envv)
 }
 
-func errorExit(format string, a ...interface{}) {
+func errorExit(format string, a ...interface{}) int {
 	fmt.Fprintf(os.Stderr, "Error: "+format+"\n", a...)
-	os.Exit(1)
+	return 1
 }
